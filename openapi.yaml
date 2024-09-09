@@ -1,0 +1,1290 @@
+openapi: 3.0.0
+info:
+  title: Open Brewery DB API
+  description: A free API for information about breweries in the US.
+  version: 1.0.0
+servers:
+  - url: https://api.openbrewerydb.org/v1
+paths:
+  /breweries/{obdb-id}:
+    get:
+      summary: Get a single brewery
+      description: |-
+        Retrieves details of a single brewery by its Open Brewery Database ID.
+
+        This ID also serves as the unique identifier of each brewery object.
+      operationId: getSingleBrewery
+      parameters:
+        - name: obdb-id
+          in: path
+          required: true
+          description: The unique Open Brewery Database ID of the brewery.
+          schema:
+            type: string
+            example: b54b16e1-ac3b-4bff-a11f-f7ae9ddc27e0
+      responses:
+        '200':
+          description: A brewery object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Brewery'
+              examples:
+                GET https://api.openbrewerydb.org/v1/breweries/b54b16e1-ac3b-4bff-a11f-f7ae9ddc27e0 {:
+                  value: |-
+                    {
+                        "id": "b54b16e1-ac3b-4bff-a11f-f7ae9ddc27e0",
+                        "name": "MadTree Brewing 2.0",
+                        "brewery_type": "regional",
+                        "address_1": "5164 Kennedy Ave",
+                        "address_2": null,
+                        "address_3": null,
+                        "city": "Cincinnati",
+                        "state_province": "Ohio",
+                        "postal_code": "45213",
+                        "country": "United States",
+                        "longitude": "-84.4137736",
+                        "latitude": "39.1885752",
+                        "phone": "5138368733",
+                        "website_url": "http://www.madtreebrewing.com",
+                        "state": "Ohio",
+                        "street": "5164 Kennedy Ave"
+                    }
+        '400':
+          description: Internal server error
+        '404':
+          description: Brewery not found
+        '429':
+          description: Too many requests
+        '500':
+          description: Server error
+  /breweries:
+    get:
+      summary: List breweries
+      description: >-
+        Returns a list of breweries. Optional query parameters allow for
+        filtering results by city, state, postal code, country,  brewer name or
+        brewer type.
+      operationId: listBreweries
+      parameters:
+        - name: page
+          in: query
+          description: >-
+            The offset or page of breweries to return.  The minimum is 1, with a
+            maximum of 100.
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            example: 15
+        - name: per_page
+          in: query
+          description: >-
+            Number of results to return per page. The default is 50, with a
+            maximum of 200.
+          required: false
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 200
+            example: 3
+        - name: by_city
+          in: query
+          description: >-
+            Filter breweries by city. 
+
+
+            Underscores or URL encoding may be used for spaces in the name (e.g.
+            `san_diego`).
+
+
+            Partial matches are allowed, so the filter can match part of a
+            longer city name.
+          required: false
+          schema:
+            type: string
+            example: san_diego
+        - name: by_state
+          in: query
+          description: >-
+            Filter breweries by state. 
+
+            Underscores or URL encoding may be used for spaces in the name (e.g.
+            `north_carolina`).
+
+
+            Partial matches are allowed, so the filter can match part of a
+            longer state name.
+          required: false
+          schema:
+            type: string
+            example: california
+        - name: by_postal
+          in: query
+          description: >-
+            Filter breweries by postal code. 
+
+
+            Partial matches are allowed, so the filter can match part of a full
+            zip code.
+          required: false
+          schema:
+            type: string
+            example: 92101
+        - name: by_country
+          in: query
+          description: >-
+            Filter breweries by country. 
+
+
+            Underscores or URL encoding may be used for spaces in the name (e.g.
+            `south_korea`)
+
+
+            Partial matches are allowed, so the filter can match part of a full
+            country name.
+          required: false
+          schema:
+            type: string
+            example: south_korea
+        - name: by_name
+          in: query
+          description: >-
+            Filter the breweries by name. 
+
+
+            Underscores or URL encoding may be used for spaces in the name (e.g.
+            `san_diego`).
+
+
+            Partial matches are allowed, so the filter can match part of a full
+            brewery name.
+          required: false
+          schema:
+            type: string
+            example: san_diego
+        - name: by_type
+          in: query
+          description: Filter the breweries by type. Must be one of the available values.
+          required: false
+          schema:
+            type: string
+            enum:
+              - micro
+              - nano
+              - regional
+              - brewpub
+              - large
+              - planning
+              - bar
+              - contract
+              - proprietor
+              - closed
+          example: micro
+        - name: by_ids
+          in: query
+          description: >-
+            A comma-separated list of brewery IDs to filter the results. A
+            maximum of 10 IDs are allowed.
+          required: false
+          schema:
+            type: string
+            example: >-
+              701239cb-5319-4d2e-92c1-129ab0b3b440,06e9fffb-e820-45c9-b107-b52b51013e8f
+        - name: by_dist
+          in: query
+          description: >-
+            A comma-separated pair of latitude and longitude to sort results by
+            distance.
+
+
+            The latitude should be a string representing a floating-point number
+            between -90 and 90, and the longitude should be a string
+            representing a floating-point number between -180 and 180. Both
+            values can have a maximum precision of up to 7 decimal
+            places.<br><br>
+          required: false
+          schema:
+            type: string
+            pattern: ^-?\d{1,3}\.\d+,-?\d{1,3}\.\d+$
+          example: 32.88313237,-117.1649842
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+          description: >
+            Sort the results by one or more fields. Use `asc` for ascending
+            order and `desc` for descending order.
+
+
+            **Note**: The `by_dist` parameter does not work with the `sort`
+            filter since it is a filter of its own.
+          example: type,name:desc
+      responses:
+        '200':
+          description: A list of brewery objects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Brewery'
+              examples:
+                GET https://api.openbrewerydb.org/v1/breweries?by_city=san_diego&per_page=3:
+                  value: |-
+                    [
+                        {
+                            "id": "ef970757-fe42-416f-931d-722451f1f59c",
+                            "name": "10 Barrel Brewing Co",
+                            "brewery_type": "large",
+                            "address_1": "1501 E St",
+                            "address_2": null,
+                            "address_3": null,
+                            "city": "San Diego",
+                            "state_province": "California",
+                            "postal_code": "92101-6618",
+                            "country": "United States",
+                            "longitude": "-117.129593",
+                            "latitude": "32.714813",
+                            "phone": "6195782311",
+                            "website_url": "http://10barrel.com",
+                            "state": "California",
+                            "street": "1501 E St"
+                        },
+                        {
+                            "id": "5fdcc498-f9df-4fa5-b35d-487a59f0fecc",
+                            "name": "2Kids Brewing Company",
+                            "brewery_type": "micro",
+                            "address_1": "8680 Miralani Dr Ste 123",
+                            "address_2": null,
+                            "address_3": null,
+                            "city": "San Diego",
+                            "state_province": "California",
+                            "postal_code": "92126-6391",
+                            "country": "United States",
+                            "longitude": "-117.137429",
+                            "latitude": "32.896584",
+                            "phone": "8584805437",
+                            "website_url": "http://www.2kidsBrewing.com",
+                            "state": "California",
+                            "street": "8680 Miralani Dr Ste 123"
+                        },
+                        {
+                            "id": "3b0b5b9b-f6d8-49e3-8ebd-0bcef6939bcd",
+                            "name": "32 North Brewing Co",
+                            "brewery_type": "closed",
+                            "address_1": "8655 Production Ave Ste A",
+                            "address_2": null,
+                            "address_3": null,
+                            "city": "San Diego",
+                            "state_province": "California",
+                            "postal_code": "92121-2258",
+                            "country": "United States",
+                            "longitude": "-117.1649842",
+                            "latitude": "32.88313237",
+                            "phone": null,
+                            "website_url": null,
+                            "state": "California",
+                            "street": "8655 Production Ave Ste A"
+                        }
+                    ]
+                GET https://api.openbrewerydb.org/v1/breweries?by_state=california&per_page=3:
+                  value: |-
+                    [
+                        {
+                            "id": "ef970757-fe42-416f-931d-722451f1f59c",
+                            "name": "10 Barrel Brewing Co",
+                            "brewery_type": "large",
+                            "address_1": "1501 E St",
+                            "address_2": null,
+                            "address_3": null,
+                            "city": "San Diego",
+                            "state_province": "California",
+                            "postal_code": "92101-6618",
+                            "country": "United States",
+                            "longitude": "-117.129593",
+                            "latitude": "32.714813",
+                            "phone": "6195782311",
+                            "website_url": "http://10barrel.com",
+                            "state": "California",
+                            "street": "1501 E St"
+                        },
+                        {
+                            "id": "5ae467af-66dc-4d7f-8839-44228f89b596",
+                            "name": "101 North Brewing Company",
+                            "brewery_type": "closed",
+                            "address_1": "1304 Scott St Ste D",
+                            "address_2": null,
+                            "address_3": null,
+                            "city": "Petaluma",
+                            "state_province": "California",
+                            "postal_code": "94954-7100",
+                            "country": "United States",
+                            "longitude": "-122.665055",
+                            "latitude": "38.27029381",
+                            "phone": "7077534934",
+                            "website_url": "http://www.101northbeer.com",
+                            "state": "California",
+                            "street": "1304 Scott St Ste D"
+                        },
+                        {
+                            "id": "4788221a-a03b-458c-9084-4cadd69ade6d",
+                            "name": "14 Cannons Brewing Company",
+                            "brewery_type": "micro",
+                            "address_1": "31125 Via Colinas Ste 907",
+                            "address_2": null,
+                            "address_3": null,
+                            "city": "Westlake Village",
+                            "state_province": "California",
+                            "postal_code": "91362-3974",
+                            "country": "United States",
+                            "longitude": "-118.802397",
+                            "latitude": "34.15334",
+                            "phone": "8186996165",
+                            "website_url": "http://14cannons.com",
+                            "state": "California",
+                            "street": "31125 Via Colinas Ste 907"
+                        }
+                    ]
+                GET https://api.openbrewerydb.org/v1/breweries?by_country=south%20korea&per_page=3:
+                  value: |-
+                    [
+                        {
+                            "id": "90d1fa86-77d7-4a21-9818-e338fa6fdb96",
+                            "name": "583 양조장(583 Brewery)",
+                            "brewery_type": "brewpub",
+                            "address_1": "583-8, Uiam-ro",
+                            "address_2": "Janggye-myeon",
+                            "address_3": null,
+                            "city": "Jangsu-gun",
+                            "state_province": "Jeollabukdo",
+                            "postal_code": "55621",
+                            "country": "South Korea",
+                            "longitude": "127.6205123",
+                            "latitude": "35.68271721",
+                            "phone": "063-353-5515",
+                            "website_url": "http://www.583beer.modoo.at",
+                            "state": "Jeollabukdo",
+                            "street": "583-8, Uiam-ro"
+                        },
+                        {
+                            "id": "200b3434-8f97-4a9d-a072-fcb7379b31d5",
+                            "name": "CRAFTROOT",
+                            "brewery_type": "brewpub",
+                            "address_1": "418,Gwangwang-ro",
+                            "address_2": null,
+                            "address_3": null,
+                            "city": "Sokcho-si",
+                            "state_province": "Gangwondo",
+                            "postal_code": "24859",
+                            "country": "South Korea",
+                            "longitude": "128.5377122",
+                            "latitude": "38.19724237",
+                            "phone": "070-8872-1001",
+                            "website_url": "https://craftroot.co.kr/",
+                            "state": "Gangwondo",
+                            "street": "418,Gwangwang-ro"
+                        },
+                        {
+                            "id": "4cc60614-30c4-406a-9fec-c5dc01b22863",
+                            "name": "Goose Island Brewhouse Seoul",
+                            "brewery_type": "brewpub",
+                            "address_1": "118, Yeoksam-ro",
+                            "address_2": null,
+                            "address_3": null,
+                            "city": "Gangnam-gu",
+                            "state_province": "Seoul",
+                            "postal_code": "06251",
+                            "country": "South Korea",
+                            "longitude": "127.0323206",
+                            "latitude": "37.49360307",
+                            "phone": "02-6205-1785",
+                            "website_url": "https://gooseisland.kr",
+                            "state": "Seoul",
+                            "street": "118, Yeoksam-ro"
+                        }
+                    ]
+                GET https://api.openbrewerydb.org/v1/breweries?by_name=san_diego&per_page=3:
+                  value: |-
+                    [
+                        {
+                            "id": "28945428-2326-41b3-b2d9-97f6e8154783",
+                            "name": "Gordon Biersch Brewery Restaurant - San Diego",
+                            "brewery_type": "brewpub",
+                            "address_1": "5010 Mission Center Rd",
+                            "address_2": null,
+                            "address_3": null,
+                            "city": "San Diego",
+                            "state_province": "California",
+                            "postal_code": "92108-3211",
+                            "country": "United States",
+                            "longitude": "-117.1539235",
+                            "latitude": "32.7740128",
+                            "phone": "6196881120",
+                            "website_url": "http://www.craftworksrestaurants.com",
+                            "state": "California",
+                            "street": "5010 Mission Center Rd"
+                        },
+                        {
+                            "id": "385a2831-a7d5-4d07-bcff-d9d3312c571c",
+                            "name": "Mikkeller Brewing San Diego",
+                            "brewery_type": "micro",
+                            "address_1": "9366 Cabot Dr",
+                            "address_2": null,
+                            "address_3": null,
+                            "city": "San Diego",
+                            "state_province": "California",
+                            "postal_code": "92126-4311",
+                            "country": "United States",
+                            "longitude": "-117.144171",
+                            "latitude": "32.89146307",
+                            "phone": null,
+                            "website_url": null,
+                            "state": "California",
+                            "street": "9366 Cabot Dr"
+                        },
+                        {
+                            "id": "7713be83-2ff6-4dc5-a28e-a4f629978402",
+                            "name": "San Diego Brewing Co",
+                            "brewery_type": "brewpub",
+                            "address_1": "10450 Friars Rd Ste L",
+                            "address_2": null,
+                            "address_3": null,
+                            "city": "San Diego",
+                            "state_province": "California",
+                            "postal_code": "92120-2311",
+                            "country": "United States",
+                            "longitude": null,
+                            "latitude": null,
+                            "phone": "6192842739",
+                            "website_url": "http://www.sandiegobrewing.com",
+                            "state": "California",
+                            "street": "10450 Friars Rd Ste L"
+                        }
+                    ]
+                GET https://api.openbrewerydb.org/v1/breweries?by_postal=92101&per_page=3:
+                  value: |-
+                    [
+                        {
+                            "id": "ef970757-fe42-416f-931d-722451f1f59c",
+                            "name": "10 Barrel Brewing Co",
+                            "brewery_type": "large",
+                            "address_1": "1501 E St",
+                            "address_2": null,
+                            "address_3": null,
+                            "city": "San Diego",
+                            "state_province": "California",
+                            "postal_code": "92101-6618",
+                            "country": "United States",
+                            "longitude": "-117.129593",
+                            "latitude": "32.714813",
+                            "phone": "6195782311",
+                            "website_url": "http://10barrel.com",
+                            "state": "California",
+                            "street": "1501 E St"
+                        },
+                        {
+                            "id": "786c56e4-c533-4181-8aec-ec976a7bde9f",
+                            "name": "Ballast Point Brewing Company - Little Italy",
+                            "brewery_type": "large",
+                            "address_1": "2215 India St",
+                            "address_2": null,
+                            "address_3": null,
+                            "city": "San Diego",
+                            "state_province": "California",
+                            "postal_code": "92101-1725",
+                            "country": "United States",
+                            "longitude": "-117.169738",
+                            "latitude": "32.727777",
+                            "phone": "6192557213",
+                            "website_url": "http://www.ballastpoint.com",
+                            "state": "California",
+                            "street": "2215 India St"
+                        },
+                        {
+                            "id": "7c4882e0-4366-41f3-b207-7be79d078c52",
+                            "name": "Half Door Brewing Company",
+                            "brewery_type": "brewpub",
+                            "address_1": "903 Island Ave",
+                            "address_2": null,
+                            "address_3": null,
+                            "city": "San Diego",
+                            "state_province": "California",
+                            "postal_code": "92101-7227",
+                            "country": "United States",
+                            "longitude": "-117.156268",
+                            "latitude": "32.710248",
+                            "phone": null,
+                            "website_url": "http://www.halfdoorbrewing.com",
+                            "state": "California",
+                            "street": "903 Island Ave"
+                        }
+                    ]
+                GET https://api.openbrewerydb.org/v1/breweries?by_type=micro&per_page=3:
+                  value: |-
+                    [
+                        {
+                            "id": "5128df48-79fc-4f0f-8b52-d06be54d0cec",
+                            "name": "(405) Brewing Co",
+                            "brewery_type": "micro",
+                            "address_1": "1716 Topeka St",
+                            "address_2": null,
+                            "address_3": null,
+                            "city": "Norman",
+                            "state_province": "Oklahoma",
+                            "postal_code": "73069-8224",
+                            "country": "United States",
+                            "longitude": "-97.46818222",
+                            "latitude": "35.25738891",
+                            "phone": "4058160490",
+                            "website_url": "http://www.405brewing.com",
+                            "state": "Oklahoma",
+                            "street": "1716 Topeka St"
+                        },
+                        {
+                            "id": "9c5a66c8-cc13-416f-a5d9-0a769c87d318",
+                            "name": "(512) Brewing Co",
+                            "brewery_type": "micro",
+                            "address_1": "407 Radam Ln Ste F200",
+                            "address_2": null,
+                            "address_3": null,
+                            "city": "Austin",
+                            "state_province": "Texas",
+                            "postal_code": "78745-1197",
+                            "country": "United States",
+                            "longitude": null,
+                            "latitude": null,
+                            "phone": "5129211545",
+                            "website_url": "http://www.512brewing.com",
+                            "state": "Texas",
+                            "street": "407 Radam Ln Ste F200"
+                        },
+                        {
+                            "id": "34e8c68b-6146-453f-a4b9-1f6cd99a5ada",
+                            "name": "1 of Us Brewing Company",
+                            "brewery_type": "micro",
+                            "address_1": "8100 Washington Ave",
+                            "address_2": null,
+                            "address_3": null,
+                            "city": "Mount Pleasant",
+                            "state_province": "Wisconsin",
+                            "postal_code": "53406-3920",
+                            "country": "United States",
+                            "longitude": "-87.88336350209435",
+                            "latitude": "42.72010826899558",
+                            "phone": "2624847553",
+                            "website_url": "https://www.1ofusbrewing.com",
+                            "state": "Wisconsin",
+                            "street": "8100 Washington Ave"
+                        }
+                    ]
+                GET https://api.openbrewerydb.org/v1/breweries?by_state=california&sort=type,name:asc&per_page=3:
+                  value: |-
+                    [
+                        {
+                            "id": "8f9621dc-da98-4ddb-82a1-039c9e2b3224",
+                            "name": "21st Amendment Brewery Cafe",
+                            "brewery_type": "brewpub",
+                            "address_1": "563 2nd St",
+                            "address_2": null,
+                            "address_3": null,
+                            "city": "San Francisco",
+                            "state_province": "California",
+                            "postal_code": "94107-1411",
+                            "country": "United States",
+                            "longitude": "-122.3925769",
+                            "latitude": "37.782448",
+                            "phone": "4153690900",
+                            "website_url": "http://www.21st-amendment.com",
+                            "state": "California",
+                            "street": "563 2nd St"
+                        },
+                        {
+                            "id": "5ec3b488-48bd-49a7-9828-05bd90195cd5",
+                            "name": "2 Tread Brewing Co",
+                            "brewery_type": "brewpub",
+                            "address_1": "1018 Santa Rosa Plz",
+                            "address_2": null,
+                            "address_3": null,
+                            "city": "Santa Rosa",
+                            "state_province": "California",
+                            "postal_code": "95401-6399",
+                            "country": "United States",
+                            "longitude": "-122.7167729",
+                            "latitude": "38.4387767",
+                            "phone": "4152330857",
+                            "website_url": "http://www.2treadbrewing.com",
+                            "state": "California",
+                            "street": "1018 Santa Rosa Plz"
+                        },
+                        {
+                            "id": "6b892c61-269b-453f-acd1-b79491b0ef0b",
+                            "name": "47 Hills Brewing Co",
+                            "brewery_type": "brewpub",
+                            "address_1": "137 S Linden Ave",
+                            "address_2": null,
+                            "address_3": null,
+                            "city": "South San Francisco",
+                            "state_province": "California",
+                            "postal_code": "94080-6410",
+                            "country": "United States",
+                            "longitude": "-122.4136168",
+                            "latitude": "37.64425595",
+                            "phone": "6508678476",
+                            "website_url": "http://47hillsbrewingcompany.com",
+                            "state": "California",
+                            "street": "137 S Linden Ave"
+                        }
+                    ]
+                GET https://api.openbrewerydb.org/v1/breweries?by_dist=32.88313237,-117.1649842&per_page=3:
+                  value: |-
+                    [
+                        {
+                            "id": "3b0b5b9b-f6d8-49e3-8ebd-0bcef6939bcd",
+                            "name": "32 North Brewing Co",
+                            "brewery_type": "closed",
+                            "address_1": "8655 Production Ave Ste A",
+                            "address_2": null,
+                            "address_3": null,
+                            "city": "San Diego",
+                            "state_province": "California",
+                            "postal_code": "92121-2258",
+                            "country": "United States",
+                            "longitude": "-117.1649842",
+                            "latitude": "32.88313237",
+                            "phone": null,
+                            "website_url": null,
+                            "state": "California",
+                            "street": "8655 Production Ave Ste A"
+                        },
+                        {
+                            "id": "558d16c5-ccf9-4a3b-b644-d6af7c60233e",
+                            "name": "Saint Archer Brewing Company",
+                            "brewery_type": "large",
+                            "address_1": "9550 Distribution Ave",
+                            "address_2": null,
+                            "address_3": null,
+                            "city": "San Diego",
+                            "state_province": "California",
+                            "postal_code": "92121-2306",
+                            "country": "United States",
+                            "longitude": "-117.163745",
+                            "latitude": "32.880445",
+                            "phone": "8582252337",
+                            "website_url": "http://www.saintarcherbrewery.com",
+                            "state": "California",
+                            "street": "9550 Distribution Ave"
+                        },
+                        {
+                            "id": "47dc6ef6-fb3a-445a-9051-36aab7679744",
+                            "name": "Rough Draft Brewing",
+                            "brewery_type": "micro",
+                            "address_1": "8830 Rehco Rd Ste D",
+                            "address_2": null,
+                            "address_3": null,
+                            "city": "San Diego",
+                            "state_province": "California",
+                            "postal_code": "92121-3263",
+                            "country": "United States",
+                            "longitude": "-117.1716977",
+                            "latitude": "32.88370283",
+                            "phone": "8584537238",
+                            "website_url": "http://www.roughdraftbrew.com",
+                            "state": "California",
+                            "street": "8830 Rehco Rd Ste D"
+                        }
+                    ]
+                GET https://api.openbrewerydb.org/v1/breweries?by_ids=701239cb-5319-4d2e-92c1-129ab0b3b440,06e9fffb-e820-45c9-b107-b52b51013e8f:
+                  value: |-
+                    [
+                        {
+                            "id": "06e9fffb-e820-45c9-b107-b52b51013e8f",
+                            "name": "12Degree Brewing",
+                            "brewery_type": "brewpub",
+                            "address_1": "820 Main St",
+                            "address_2": null,
+                            "address_3": null,
+                            "city": "Louisville",
+                            "state_province": "Colorado",
+                            "postal_code": "80027-1865",
+                            "country": "United States",
+                            "longitude": "-105.1319826",
+                            "latitude": "39.9782443",
+                            "phone": "3035791004",
+                            "website_url": "http://www.12degree.com",
+                            "state": "Colorado",
+                            "street": "820 Main St"
+                        },
+                        {
+                            "id": "701239cb-5319-4d2e-92c1-129ab0b3b440",
+                            "name": "Bière de la Plaine",
+                            "brewery_type": "micro",
+                            "address_1": "16 Rue Saint Pierre",
+                            "address_2": null,
+                            "address_3": null,
+                            "city": "Marseille",
+                            "state_province": "Bouche du Rhône",
+                            "postal_code": "13006",
+                            "country": "France",
+                            "longitude": "5.38767154",
+                            "latitude": "43.29366192",
+                            "phone": "491473254",
+                            "website_url": "https://brasseriedelaplaine.fr/",
+                            "state": "Bouche du Rhône",
+                            "street": "16 Rue Saint Pierre"
+                        }
+                    ]
+        '400':
+          description: Internal server error
+        '429':
+          description: Too many requests
+        '500':
+          description: Server error
+  /breweries/random:
+    get:
+      summary: Get a random brewery
+      description: >-
+        Returns a random brewery or multiple random breweries when size is
+        specified.
+      operationId: getRandomBrewery
+      parameters:
+        - name: size
+          in: query
+          description: |-
+            Number of random breweries to return. 
+
+            Defaults to 1, max is 50.
+          required: false
+          schema:
+            type: integer
+            example: 3
+      responses:
+        '200':
+          description: A list of random brewery objects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Brewery'
+              examples:
+                GET https://api.openbrewerydb.org/v1/breweries/random:
+                  value: |-
+                    [
+                        {
+                            "id": "8de15b68-c090-4116-9d26-e09a2c845c52",
+                            "name": "North Brewery",
+                            "brewery_type": "micro",
+                            "address_1": "110 Washington Ave",
+                            "address_2": null,
+                            "address_3": null,
+                            "city": "Endicott",
+                            "state_province": "New York",
+                            "postal_code": "13760-5307",
+                            "country": "United States",
+                            "longitude": "-76.04827802",
+                            "latitude": "42.102192",
+                            "phone": "6077850524",
+                            "website_url": "http://www.northbrewery.com",
+                            "state": "New York",
+                            "street": "110 Washington Ave"
+                        }
+                    ]
+                GET https://api.openbrewerydb.org/v1/breweries/random?size=3:
+                  value: |-
+                    [
+                        {
+                            "id": "c71cd9d0-be0f-4528-8d21-9f89957372f9",
+                            "name": "Dovetail Brewery",
+                            "brewery_type": "micro",
+                            "address_1": "1800 W Belle Plaine Ave",
+                            "address_2": null,
+                            "address_3": null,
+                            "city": "Chicago",
+                            "state_province": "Illinois",
+                            "postal_code": "60613-1827",
+                            "country": "United States",
+                            "longitude": "-87.6743858",
+                            "latitude": "41.9561589",
+                            "phone": null,
+                            "website_url": "http://www.dovetailbrewery.com",
+                            "state": "Illinois",
+                            "street": "1800 W Belle Plaine Ave"
+                        },
+                        {
+                            "id": "efabcc36-ebba-44f1-82ad-5194fc55574e",
+                            "name": "Henniker Brewing Company, LLC",
+                            "brewery_type": "micro",
+                            "address_1": "129 Centervale Rd",
+                            "address_2": null,
+                            "address_3": null,
+                            "city": "Henniker",
+                            "state_province": "New Hampshire",
+                            "postal_code": "03242-3280",
+                            "country": "United States",
+                            "longitude": "-71.7824433",
+                            "latitude": "43.17880862",
+                            "phone": "6034283579",
+                            "website_url": "http://www.hennikerbrewing.com",
+                            "state": "New Hampshire",
+                            "street": "129 Centervale Rd"
+                        },
+                        {
+                            "id": "3bcfdd00-3126-4d97-8a75-7236d477b6cf",
+                            "name": "River Roost Brewery",
+                            "brewery_type": "micro",
+                            "address_1": "230 S Main St",
+                            "address_2": null,
+                            "address_3": null,
+                            "city": "White River Junction",
+                            "state_province": "Vermont",
+                            "postal_code": "05001-7204",
+                            "country": "United States",
+                            "longitude": "-72.31821547",
+                            "latitude": "43.64560685",
+                            "phone": null,
+                            "website_url": "http://www.riverroostbrewery.com",
+                            "state": "Vermont",
+                            "street": "230 S Main St"
+                        }
+                    ]
+        '400':
+          description: Internal server error
+        '429':
+          description: Too many requests
+        '500':
+          description: Server error
+  /breweries/search:
+    get:
+      summary: Search breweries by a term
+      description: Searches breweries based on a query term.
+      operationId: searchBreweries
+      parameters:
+        - name: query
+          in: query
+          description: >-
+            The search term for breweries. The query term could potentially
+            match any field in the brewery object. 
+
+
+            Underscores or URL encoding may be used for spaces in the query term
+            (e.g. `san%20diego`)
+
+
+            Partial matches are allowed, so the filter can match part of the
+            whole target.
+          required: true
+          schema:
+            type: string
+            example: san%20diego
+        - name: per_page
+          in: query
+          description: Number of breweries to return per page.
+          required: false
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 200
+            example: 3
+      responses:
+        '200':
+          description: A list of brewery objects matching the search term.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Brewery'
+              examples:
+                GET https://api.openbrewerydb.org/v1/breweries/search?query=san%20diego&per_page=3:
+                  value: |-
+                    [
+                        {
+                            "id": "385a2831-a7d5-4d07-bcff-d9d3312c571c",
+                            "name": "Mikkeller Brewing San Diego",
+                            "brewery_type": "micro",
+                            "address_1": "9366 Cabot Dr",
+                            "address_2": null,
+                            "address_3": null,
+                            "city": "San Diego",
+                            "state_province": "California",
+                            "postal_code": "92126-4311",
+                            "country": "United States",
+                            "longitude": "-117.144171",
+                            "latitude": "32.89146307",
+                            "phone": null,
+                            "website_url": null,
+                            "state": "California",
+                            "street": "9366 Cabot Dr"
+                        },
+                        {
+                            "id": "7713be83-2ff6-4dc5-a28e-a4f629978402",
+                            "name": "San Diego Brewing Co",
+                            "brewery_type": "brewpub",
+                            "address_1": "10450 Friars Rd Ste L",
+                            "address_2": null,
+                            "address_3": null,
+                            "city": "San Diego",
+                            "state_province": "California",
+                            "postal_code": "92120-2311",
+                            "country": "United States",
+                            "longitude": null,
+                            "latitude": null,
+                            "phone": "6192842739",
+                            "website_url": "http://www.sandiegobrewing.com",
+                            "state": "California",
+                            "street": "10450 Friars Rd Ste L"
+                        },
+                        {
+                            "id": "28945428-2326-41b3-b2d9-97f6e8154783",
+                            "name": "Gordon Biersch Brewery Restaurant - San Diego",
+                            "brewery_type": "brewpub",
+                            "address_1": "5010 Mission Center Rd",
+                            "address_2": null,
+                            "address_3": null,
+                            "city": "San Diego",
+                            "state_province": "California",
+                            "postal_code": "92108-3211",
+                            "country": "United States",
+                            "longitude": "-117.1539235",
+                            "latitude": "32.7740128",
+                            "phone": "6196881120",
+                            "website_url": "http://www.craftworksrestaurants.com",
+                            "state": "California",
+                            "street": "5010 Mission Center Rd"
+                        }
+                    ]
+        '400':
+          description: Internal server error
+        '429':
+          description: Too many requests
+        '500':
+          description: Server error
+  /breweries/autocomplete:
+    get:
+      summary: Autocomplete breweries
+      description: >-
+        Returns a list of brewery names and IDs based on a search term for the
+        brewery name. This endpoint is typically used for a drop-down selection.
+      operationId: autocompleteBreweries
+      parameters:
+        - name: query
+          in: query
+          description: >-
+            The search term for breweries. The query term could partially match
+            the brewery name.
+
+
+            Underscores or URL encoding may be used for spaces in the query term
+            (e.g. `san%20diego`) 
+
+
+            The maximum number of breweries returned is 15.
+          required: true
+          schema:
+            type: string
+            example: san_diego
+      responses:
+        '200':
+          description: A list of brewery names and IDs.Maximum 15 results will be returned.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: 385a2831-a7d5-4d07-bcff-d9d3312c571c
+                    name:
+                      type: string
+                      example: Mikkeller Brewing San Diego
+              examples:
+                GET https://api.openbrewerydb.org/v1/breweries/autocomplete?query=san%20diego:
+                  value: |-
+                    [
+                        {
+                            "id": "385a2831-a7d5-4d07-bcff-d9d3312c571c",
+                            "name": "Mikkeller Brewing San Diego"
+                        },
+                        {
+                            "id": "7713be83-2ff6-4dc5-a28e-a4f629978402",
+                            "name": "San Diego Brewing Co"
+                        },
+                        {
+                            "id": "28945428-2326-41b3-b2d9-97f6e8154783",
+                            "name": "Gordon Biersch Brewery Restaurant - San Diego"
+                        },
+                        {
+                            "id": "01b395ba-7b97-4214-a98c-365ad281d9dd",
+                            "name": "G8 Development, Inc."
+                        },
+                        {
+                            "id": "0338af09-60df-4e16-9fd6-89d3033c9cc2",
+                            "name": "Deft Brewing"
+                        },
+                        {
+                            "id": "084aeeb4-c3dd-4f83-9d43-732e9bac41d2",
+                            "name": "Mike Hess Brewing - Miramar"
+                        },
+                        {
+                            "id": "0917c834-47a2-4156-9f17-9eeeb16e7f7d",
+                            "name": "Little Miss Brewing"
+                        },
+                        {
+                            "id": "0abde004-c1ab-451f-9cb0-f7b3cce45477",
+                            "name": "Second Chance Beer Company"
+                        },
+                        {
+                            "id": "0cbb2117-5968-4d0d-a0fd-9ee7c7f53e31",
+                            "name": "Ballast Point Brewing Company"
+                        },
+                        {
+                            "id": "0e8aa3fe-40d6-4d55-8d2f-2a3348f14421",
+                            "name": "Mission Brewery"
+                        },
+                        {
+                            "id": "0f0b7b5b-b5ae-48f1-9339-5b363249da79",
+                            "name": "Pizza Port Ocean Beach"
+                        },
+                        {
+                            "id": "11074879-0fa1-4bbb-956e-d3d00a47262b",
+                            "name": "Thorn Brewing Co"
+                        },
+                        {
+                            "id": "11f16c8a-e029-4f1c-8535-d8c736df682c",
+                            "name": "Helm's Brewing Company, LLC"
+                        },
+                        {
+                            "id": "11f1fe94-506f-4117-b2b7-47346d9f094d",
+                            "name": "Ocean Beach Brewery"
+                        },
+                        {
+                            "id": "151d81b1-6d9b-4c31-80da-c8005d5e6205",
+                            "name": "Citizen Brewers"
+                        }
+                    ]
+        '400':
+          description: Internal server error
+        '429':
+          description: Too many requests
+        '500':
+          description: Server error
+  /breweries/meta:
+    get:
+      summary: Get metadata for breweries
+      description: >-
+        Shows metadata including the total count of breweries, pages, and
+        results per page.
+      operationId: getBreweriesMetadata
+      parameters:
+        - name: by_city
+          in: query
+          description: >-
+            Filter breweries by city. 
+
+
+            Underscores or URL encoding may be used for spaces in the name (e.g.
+            `san_diego`).
+
+
+            Partial matches are allowed, so the filter can match part of a
+            longer city name.
+          required: false
+          schema:
+            type: string
+            example: san_diego
+        - name: by_state
+          in: query
+          description: >-
+            Filter breweries by state. 
+
+
+            Partial matches are allowed, so the filter can match part of a
+            longer state name.
+          required: false
+          schema:
+            type: string
+            example: california
+        - name: by_postal
+          in: query
+          description: >-
+            Filter breweries by postal code. 
+
+
+            Partial matches are allowed, so the filter can match part of a full
+            zip code.
+          required: false
+          schema:
+            type: string
+            example: 92101
+        - name: by_country
+          in: query
+          description: >-
+            Filter breweries by country.
+
+
+            Underscores or URL encoding may be used for spaces in the name (e.g.
+            `south_korea`)
+
+
+            Partial matches are allowed, so the filter can match part of a full
+            country name.
+          required: false
+          schema:
+            type: string
+            example: south_korea
+        - name: by_name
+          in: query
+          description: >-
+            Filter the breweries by name. 
+
+
+            Underscores or URL encoding may be used for spaces in the name (e.g.
+            `san_diego`)
+
+
+            Partial matches are allowed, so the filter can match part of a
+            longer brewery name.
+          required: false
+          schema:
+            type: string
+            example: san_diego
+        - name: by_type
+          in: query
+          description: Filter the breweries by type. Must be one of the available values.
+          required: false
+          schema:
+            type: string
+            enum:
+              - micro
+              - nano
+              - regional
+              - brewpub
+              - large
+              - planning
+              - bar
+              - contract
+              - proprietor
+              - closed
+          example: micro
+        - name: by_ids
+          in: query
+          description: |-
+            A comma-separated list of brewery IDs to filter the results. 
+
+            A maximum of 10 IDs are allowed.
+          required: false
+          schema:
+            type: string
+            example: >-
+              701239cb-5319-4d2e-92c1-129ab0b3b440,06e9fffb-e820-45c9-b107-b52b51013e8f
+      responses:
+        '200':
+          description: Metadata about breweries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: string
+                    example: '8318'
+                  page:
+                    type: string
+                    example: '1'
+                  per_page:
+                    type: string
+                    example: '50'
+              examples:
+                GET https://api.openbrewerydb.org/v1/breweries/meta:
+                  value: |-
+                    {
+                        "total": "8318",
+                        "page": "1",
+                        "per_page": "50"
+                    }
+                GET https://api.openbrewerydb.org/v1/breweries/meta?by_country=south_korea:
+                  value: |-
+                    {
+                        "total": "61",
+                        "page": "1",
+                        "per_page": "50"
+                    }
+                GET https://api.openbrewerydb.org/v1/breweries/meta?by_type=micro:
+                  value: |-
+                    {
+                        "total": "4290",
+                        "page": "1",
+                        "per_page": "50"
+                    }
+        '400':
+          description: Internal server error
+        '429':
+          description: Too many requests
+        '500':
+          description: Server error
+components:
+  schemas:
+    Brewery:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 1f33d1c9-74e4-46bb-822e-aebfa1d180b9
+        name:
+          type: string
+          example: Modern Times - The Dankness Dojo
+        brewery_type:
+          type: string
+          example: brewpub
+        address_1:
+          type: string
+          example: 3725 Greenwood St
+        address_2:
+          type: string
+          nullable: true
+          example: 3724 Greenwood St
+        address_3:
+          type: string
+          nullable: true
+          example: 3723 Greenwood St
+        city:
+          type: string
+          example: San Diego
+        state_province:
+          type: string
+          example: California
+        postal_code:
+          type: string
+          example: 92110-4441
+        country:
+          type: string
+          example: United States
+        longitude:
+          type: string
+          nullable: true
+          example: '-117.206153'
+        latitude:
+          type: string
+          nullable: true
+          example: '32.754233'
+        phone:
+          type: string
+          nullable: true
+          example: '6195469694'
+        website_url:
+          type: string
+          nullable: true
+          example: https://example.com
+        state:
+          type: string
+          example: California
+        street:
+          type: string
+          example: 3725 Greenwood St
