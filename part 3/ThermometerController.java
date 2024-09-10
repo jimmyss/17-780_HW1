@@ -8,7 +8,9 @@ public class ThermometerController {
     // include services
 
     /**
-     * brief: Get the current temperature in Fahrenheit or Celsius
+     * brief: Get the current measured temperature of the thermonuclear
+     *        fusion reactor in degrees Fahrenheit or Celsius.
+     * 
      * url: /api/v1/thermometer?unit="fahrenheit"
      *      /api/v1/thermometer?unit="celsius"
      *
